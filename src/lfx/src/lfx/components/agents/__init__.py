@@ -7,13 +7,15 @@ from lfx.components._importing import import_mod
 if TYPE_CHECKING:
     from lfx.components.agents.agent import AgentComponent
     from lfx.components.agents.mcp_component import MCPToolsComponent
+    from lfx.components.agents.pab_agent import PABAgentComponent
 
 _dynamic_imports = {
     "AgentComponent": "agent",
     "MCPToolsComponent": "mcp_component",
+    "PABAgentComponent": "pab_agent",
 }
 
-__all__ = ["AgentComponent", "MCPToolsComponent"]
+__all__ = ["AgentComponent", "MCPToolsComponent", "PABAgentComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:

@@ -34,6 +34,7 @@ import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
+import SAPCredentialsPage from "./pages/SettingsPage/pages/SAPCredentialsPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import ViewPage from "./pages/ViewPage";
 
@@ -145,6 +146,10 @@ const router = createBrowserRouter(
                         <GeneralPage />
                       </AuthSettingsGuard>
                     }
+                  />
+                  <Route
+                    path="sap-credentials"
+                    element={<SAPCredentialsPage />}
                   />
                   <Route path="shortcuts" element={<ShortcutsPage />} />
                   <Route path="messages" element={<MessagesPage />} />

@@ -72,6 +72,7 @@ export const MemoizedSidebarTrigger = memo(() => {
       >
         {NAV_ITEMS.map((item) => (
           <CanvasControlButton
+            key={item.id}
             data-testid={`sidebar-trigger-${item.id}`}
             iconName={item.icon}
             iconClasses={item.id === "mcp" ? "h-8 w-8" : ""}
