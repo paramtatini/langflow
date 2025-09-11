@@ -1,7 +1,5 @@
-from .oauth_token import OAuthTokenComponent
-from .pab_agents_fetcher import PABAgentsFetcherComponent
+from .ariba_agent import AribaAgentComponent
 
 __all__ = [
-    "OAuthTokenComponent",
-    "PABAgentsFetcherComponent",
+    "AribaAgentComponent",
 ]

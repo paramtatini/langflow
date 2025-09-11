@@ -26,7 +26,7 @@ export const useGetPABAgents: useQueryFunctionType<undefined, PABAgent[]> = (
   const { query } = UseRequestProcessor();
 
   const getPABAgentsFunction = async (): Promise<PABAgent[]> => {
-    const response = await api.get(`${getURL("SAP")}/pab/agents`);
+    const response = await api.get(`${getURL("SAP")}/ariba_agents`);
     return response.data;
   };
 
