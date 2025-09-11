@@ -235,7 +235,13 @@ class PABAgentComponent(Component):
             # Try to get from global variables first (for backward compatibility)
             import json
 
-            from langflow.services.variable.utils import get_variable_value
+            try:
+                from langflow.services.variable.utils import get_variable_value
+            except ImportError:
+                # Fallback for LFX environment
+                import os
+                async def get_variable_value(name: str, user_id: str = None):
+                    return os.getenv(name)
 
             # Try to get the credentials from the global variable
             credentials_json = await get_variable_value(
@@ -259,7 +265,13 @@ class PABAgentComponent(Component):
             # Try to get from global variables first (for backward compatibility)
             import json
 
-            from langflow.services.variable.utils import get_variable_value
+            try:
+                from langflow.services.variable.utils import get_variable_value
+            except ImportError:
+                # Fallback for LFX environment
+                import os
+                async def get_variable_value(name: str, user_id: str = None):
+                    return os.getenv(name)
 
             # Try to get the agents from the global variable
             agents_json = await get_variable_value(name="SAP_PAB_AGENTS", user_id=getattr(self, "user_id", None))
@@ -325,7 +337,13 @@ class PABAgentComponent(Component):
                 try:
                     import json
 
-                    from langflow.services.variable.utils import update_variable_value
+                    try:
+                        from langflow.services.variable.utils import update_variable_value
+                    except ImportError:
+                        # Fallback for LFX environment
+                        async def update_variable_value(name: str, value: str, user_id: str = None):
+                            print(f"Warning: Cannot update variable {name} in LFX environment")
+                            return False
 
                     # Get current agents
                     agents = await self.get_available_agents()

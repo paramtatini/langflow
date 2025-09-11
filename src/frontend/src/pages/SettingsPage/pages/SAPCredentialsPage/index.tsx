@@ -70,7 +70,11 @@ export default function SAPCredentialsPage() {
           const isHtml = /<html|<body|<!DOCTYPE/i.test(errorMessage);
           setErrorData({
             title: "Error saving PAB credentials",
-            list: [isHtml ? "An unexpected server error occurred. Please check backend logs for details." : errorMessage],
+            list: [
+              isHtml
+                ? "An unexpected server error occurred. Please check backend logs for details."
+                : errorMessage,
+            ],
           });
         },
         onSettled: () => {
