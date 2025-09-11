@@ -4,7 +4,7 @@ import httpx
 from pydantic import BaseModel
 
 from lfx.custom.custom_component.component import Component
-from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, TextInput
+from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, StrInput
 from lfx.schema.message import Message
 
 
@@ -17,7 +17,9 @@ class PABCredentials(BaseModel):
 
 class PABAgentComponent(Component):
     display_name: str = "PAB Agent"
-    description: str = "Create and execute tasks using SAP Project Agent Builder (PAB) agents with advanced AI capabilities."
+    description: str = (
+        "Create and execute tasks using SAP Project Agent Builder (PAB) agents with advanced AI capabilities."
+    )
     icon: str = "bot"
     name: str = "PABAgent"
 
@@ -31,14 +33,14 @@ class PABAgentComponent(Component):
             real_time_refresh=True,
             advanced=False,
         ),
-        TextInput(
+        StrInput(
             name="agent_name",
             display_name="Name",
             info="Enter Agent Name (required for creating new agents).",
             value="",
             required=False,
         ),
-        TextInput(
+        StrInput(
             name="expertise",
             display_name="Expertise",
             info="Short description of what the agent is an expert in.",
@@ -163,6 +165,7 @@ class PABAgentComponent(Component):
             if hasattr(self, "orchestration_config") and self.orchestration_config:
                 try:
                     import json
+
                     orchestration_config = json.loads(self.orchestration_config)
                 except json.JSONDecodeError:
                     # Use default empty config if parsing fails
@@ -306,26 +309,27 @@ class PABAgentComponent(Component):
                         sender="PAB Agent",
                         sender_name="PAB Agent",
                     )
-                
+
                 # Create new agent
                 agent_id = await self.create_pab_agent(credentials, access_token)
                 agent_name = self.agent_name
-                
+
                 if not agent_id:
                     return Message(
                         text="Failed to create new PAB agent. Please check your configuration and try again.",
                         sender="PAB Agent",
                         sender_name="PAB Agent",
                     )
-                
+
                 # Refresh the agents list to include the new agent
                 try:
-                    from langflow.services.variable.utils import update_variable_value
                     import json
-                    
+
+                    from langflow.services.variable.utils import update_variable_value
+
                     # Get current agents
                     agents = await self.get_available_agents()
-                    
+
                     # Add the new agent to the list
                     new_agent = {
                         "ID": agent_id,
@@ -343,14 +347,12 @@ class PABAgentComponent(Component):
                         "modifiedAt": "",  # Will be set by PAB service
                     }
                     agents.append(new_agent)
-                    
+
                     # Update the stored agents list
                     await update_variable_value(
-                        name="SAP_PAB_AGENTS",
-                        value=json.dumps(agents),
-                        user_id=getattr(self, "user_id", None)
+                        name="SAP_PAB_AGENTS", value=json.dumps(agents), user_id=getattr(self, "user_id", None)
                     )
-                    
+
                 except Exception as e:
                     # Log error but continue with execution
                     print(f"Warning: Could not update agents list: {e}")

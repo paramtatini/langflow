@@ -12,9 +12,18 @@ export interface PABCredentialsResponse {
   };
 }
 
-async function getPABCredentials(): Promise<PABCredentialsResponse> {
-  const response = await api.get("/sap/pab/credentials");
-  return response.data;
+async function getPABCredentials(): Promise<PABCredentialsResponse | null> {
+  try {
+    const response = await api.get("/sap/pab/credentials");
+    return response.data;
+  } catch (error: any) {
+    // If credentials don't exist (404), return null instead of throwing
+    if (error.response?.status === 404) {
+      return null;
+    }
+    // Re-throw other errors
+    throw error;
+  }
 }
 
 export function useGetPABCredentials() {
@@ -23,5 +32,7 @@ export function useGetPABCredentials() {
     queryFn: getPABCredentials,
     retry: false, // Don't retry if credentials don't exist
     refetchOnWindowFocus: false,
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache the data
   });
 }

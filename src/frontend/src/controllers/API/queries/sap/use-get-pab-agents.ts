@@ -41,3 +41,6 @@ export const useGetPABAgents: useQueryFunctionType<undefined, PABAgent[]> = (
 
   return queryResult;
 };
+
+// Also export as default for compatibility
+export default useGetPABAgents;

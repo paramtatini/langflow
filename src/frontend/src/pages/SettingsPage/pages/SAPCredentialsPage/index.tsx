@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +28,8 @@ export default function SAPCredentialsPage() {
 
   const { mutate: savePABCredentials } = useSavePABCredentials();
   const { refetch: refetchPABAgents } = useGetPABAgents();
-  const { data: savedCredentials, isLoading: isLoadingCredentials } = useGetPABCredentials();
+  const { data: savedCredentials, isLoading: isLoadingCredentials } =
+    useGetPABCredentials();
 
   // Load saved credentials when component mounts or when credentials are fetched
   useEffect(() => {
@@ -36,6 +37,9 @@ export default function SAPCredentialsPage() {
       // Format the credentials back to the original service key format for editing
       const formattedCredentials = JSON.stringify(savedCredentials, null, 2);
       setPabCredentials(formattedCredentials);
+    } else if (savedCredentials === null && !isLoadingCredentials) {
+      // No credentials found, keep the field empty
+      setPabCredentials("");
     }
   }, [savedCredentials, isLoadingCredentials]);
 
@@ -61,9 +65,12 @@ export default function SAPCredentialsPage() {
           refetchPABAgents();
         },
         onError: (error: any) => {
+          const errorMessage = error.message || "Failed to save credentials";
+          // Check if the error message looks like HTML
+          const isHtml = /<html|<body|<!DOCTYPE/i.test(errorMessage);
           setErrorData({
             title: "Error saving PAB credentials",
-            list: [error.message || "Failed to save credentials"],
+            list: [isHtml ? "An unexpected server error occurred. Please check backend logs for details." : errorMessage],
           });
         },
         onSettled: () => {
