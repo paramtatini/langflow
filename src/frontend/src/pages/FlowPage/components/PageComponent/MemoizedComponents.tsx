@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { cn } from "@/utils/utils";
-import { useSearchContext } from "../flowSidebarComponent";
+import { useSearchContext } from "../flowSidebarComponent/contexts/SearchContext";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
 
 export const MemoizedBackground = memo(() => (

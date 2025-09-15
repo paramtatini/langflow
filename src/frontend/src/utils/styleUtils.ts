@@ -91,6 +91,7 @@ export const nodeColors: { [char: string]: string } = {
   chains: "#FE7500",
   list: "#9AAE42",
   agents: "#903BBE",
+  ariba_agents: "#0066CC",
   Olivya: "#00413B",
   tools: "#00fbfc",
   memories: "#F5B85A",
@@ -143,6 +144,7 @@ export const nodeColorsName: { [char: string]: string } = {
   chains: "orange",
   list: "lime",
   agents: "purple",
+  ariba_agents: "blue",
   tools: "cyan",
   memories: "amber",
   saved_components: "lime",
@@ -209,6 +211,7 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
   { display_name: "Input / Output", name: "input_output", icon: "Cable" },
   { display_name: "Agents", name: "agents", icon: "Bot" },
+  { display_name: "Ariba Agents", name: "ariba_agents", icon: "Building2" },
   { display_name: "Models", name: "models", icon: "BrainCog" },
   { display_name: "Data", name: "data", icon: "Database" },
   {

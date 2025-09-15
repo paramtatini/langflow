@@ -81,7 +81,113 @@ async def import_langflow_components():
                     modules_dict[top_level] = {}
                 modules_dict[top_level].update(components)
 
+    # Note: Dynamic Ariba agents are now loaded from the frontend UI
+    # instead of during backend initialization to avoid circular dependencies
+
     return {"components": modules_dict}
+
+
+async def _load_dynamic_ariba_agents() -> dict:
+    """Load dynamic Ariba agents from the backend API and create component templates."""
+    try:
+        await logger.adebug("Starting dynamic Ariba agents loading...")
+        
+        # Import here to avoid circular imports
+        try:
+            import httpx
+            await logger.adebug("httpx imported successfully")
+        except ImportError as e:
+            await logger.aerror(f"Failed to import httpx: {e}")
+            return {}
+        
+        # Fetch agents from the backend API
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                await logger.adebug("Making request to http://localhost:7860/api/v1/sap/ariba_agents")
+                response = await client.get("http://localhost:7860/api/v1/sap/ariba_agents")
+                await logger.adebug(f"API response status: {response.status_code}")
+                
+                if response.status_code != 200:
+                    await logger.awarning(f"Failed to fetch Ariba agents: HTTP {response.status_code}, Response: {response.text}")
+                    return {}
+                
+                agents = response.json()
+                await logger.adebug(f"Received {len(agents) if agents else 0} agents from API")
+                
+                if not agents:
+                    await logger.awarning("No agents received from API")
+                    return {}
+        except Exception as e:
+            await logger.aerror(f"Error fetching agents from API: {e}", exc_info=True)
+            return {}
+        
+        dynamic_components = {}
+        
+        # Import the dynamic component creation function
+        try:
+            from lfx.components.ariba_agents.dynamic_agent_fetcher import create_dynamic_agent_component
+            await logger.adebug("Successfully imported create_dynamic_agent_component")
+        except ImportError as e:
+            await logger.aerror(f"Failed to import create_dynamic_agent_component: {e}", exc_info=True)
+            return {}
+        
+        for i, agent in enumerate(agents):
+            agent_id = agent.get("ID", "")
+            agent_name = agent.get("name", "Unknown Agent")
+            agent_expertise = agent.get("expertIn", "")
+            
+            await logger.adebug(f"Processing agent {i+1}/{len(agents)}: {agent_name} (ID: {agent_id})")
+            
+            if not agent_id:
+                await logger.awarning(f"Skipping agent {agent_name} - no ID provided")
+                continue
+            
+            try:
+                # Create the dynamic component class
+                await logger.adebug(f"Creating component class for {agent_name}")
+                component_class = create_dynamic_agent_component(agent)
+                await logger.adebug(f"Component class created: {component_class.__name__}")
+                
+                # Create an instance to get the template structure
+                await logger.adebug(f"Creating component instance for {agent_name}")
+                component_instance = component_class()
+                await logger.adebug(f"Component instance created successfully")
+                
+                # Use create_component_template to generate proper template
+                # We need to add the required attributes to make it work
+                component_instance._code = f"# Dynamic Ariba Agent: {agent_name}"
+                component_instance.code_class_base_inheritance = "Component"
+                await logger.adebug(f"Added required attributes to component instance")
+                
+                # Generate the full component template using Langflow's template system
+                full_module_name = f"lfx.components.ariba_agents.dynamic_agent_fetcher.{component_class.__name__}"
+                await logger.adebug(f"Generating template with module name: {full_module_name}")
+                
+                comp_template, _ = create_component_template(
+                    component_extractor=component_instance, 
+                    module_name=full_module_name
+                )
+                await logger.adebug(f"Template generated successfully for {agent_name}")
+                
+                # Use the agent name as the component key for better UI display
+                clean_name = agent_name.replace(" ", "_").replace("-", "_")
+                # Ensure unique names by appending part of ID if needed
+                if clean_name in dynamic_components:
+                    clean_name = f"{clean_name}_{agent_id[:8]}"
+                
+                dynamic_components[clean_name] = comp_template
+                await logger.adebug(f"Added component {clean_name} to dynamic_components")
+                
+            except Exception as e:
+                await logger.aerror(f"Failed to create component for agent {agent_name}: {e}", exc_info=True)
+                continue
+        
+        await logger.adebug(f"Successfully created {len(dynamic_components)} dynamic Ariba agent components")
+        return dynamic_components
+        
+    except Exception as e:
+        await logger.aerror(f"Error loading dynamic Ariba agents: {e}", exc_info=True)
+        return {}
 
 
 def _process_single_module(modname: str) -> tuple[str, dict] | None:

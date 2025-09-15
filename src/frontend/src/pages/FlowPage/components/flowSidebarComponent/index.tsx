@@ -1,10 +1,8 @@
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
 import {
-  createContext,
   memo,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -20,6 +18,7 @@ import {
 } from "@/components/ui/sidebar";
 import SkeletonGroup from "@/components/ui/skeletonGroup";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
+import { useGetAribaAgents } from "@/controllers/API/queries/sap/use-get-ariba-agents";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
@@ -40,6 +39,7 @@ import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
 import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
+import { useSearchContext } from "./contexts/SearchContext";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
 import { applyEdgeFilter } from "./helpers/apply-edge-filter";
 import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
@@ -52,95 +52,6 @@ import { UniqueInputsComponents } from "./types";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
-
-// Search context for the sidebar
-export type SearchContextType = {
-  focusSearch: () => void;
-  isSearchFocused: boolean;
-  // Additional properties for the sidebar to use
-  search?: string;
-  setSearch?: (value: string) => void;
-  searchInputRef?: React.RefObject<HTMLInputElement>;
-  handleInputFocus?: () => void;
-  handleInputBlur?: () => void;
-  handleInputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-};
-
-export const SearchContext = createContext<SearchContextType | null>(null);
-
-export function useSearchContext() {
-  const context = useContext(SearchContext);
-  if (!context) {
-    throw new Error("useSearchContext must be used within SearchProvider");
-  }
-  return context;
-}
-
-interface SearchProviderProps {
-  children: React.ReactNode;
-  searchInputRef: React.RefObject<HTMLInputElement>;
-  isSearchFocused: boolean;
-}
-
-// Create a provider that can be used at the FlowPage level
-export function FlowSearchProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [search, setSearch] = useState("");
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
-
-  const focusSearchInput = useCallback(() => {
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, []);
-
-  const handleInputFocus = useCallback(() => {
-    setIsInputFocused(true);
-  }, []);
-
-  const handleInputBlur = useCallback(() => {
-    setIsInputFocused(false);
-  }, []);
-
-  const handleInputChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setSearch(event.target.value);
-    },
-    [],
-  );
-
-  const searchContextValue = useMemo(
-    () => ({
-      focusSearch: focusSearchInput,
-      isSearchFocused: isInputFocused,
-      // Also expose the search state and handlers for the sidebar to use
-      search,
-      setSearch,
-      searchInputRef,
-      handleInputFocus,
-      handleInputBlur,
-      handleInputChange,
-    }),
-    [
-      focusSearchInput,
-      isInputFocused,
-      search,
-      handleInputFocus,
-      handleInputBlur,
-      handleInputChange,
-    ],
-  );
-
-  return (
-    <SearchContext.Provider value={searchContextValue}>
-      {children}
-    </SearchContext.Provider>
-  );
-}
 
 interface FlowSidebarComponentProps {
   isLoading?: boolean;
@@ -170,6 +81,14 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     isError: mcpError,
   } = useGetMCPServers({ enabled: ENABLE_NEW_SIDEBAR });
 
+  // Get Ariba agents for dynamic component creation
+  const {
+    data: aribaAgents,
+    isLoading: aribaLoading,
+    isSuccess: aribaSuccess,
+    isError: aribaError,
+  } = useGetAribaAgents({ enabled: true });
+
   // Get search state from context
   const context = useSearchContext();
   // Unconditional fallback ref to satisfy Rules of Hooks
@@ -192,8 +111,11 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const [showLegacy, setShowLegacy] = useState(false);
   const [mcpSearchData, setMcpSearchData] = useState<any[]>([]);
 
-  // Create base data that includes MCP category when available
+  // Create base data that includes MCP and Ariba agents categories when available
   const baseData = useMemo(() => {
+    let extendedData = { ...data };
+
+    // Add MCP category
     if (mcpSuccess && mcpServers && data["agents"]?.["MCPTools"]) {
       const mcpComponent = data["agents"]["MCPTools"];
       const newMcpSearchData = mcpServers.map((mcpServer) => ({
@@ -216,13 +138,91 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         mcpCategoryData[mcp.display_name] = mcp;
       });
 
-      return {
-        ...data,
+      extendedData = {
+        ...extendedData,
         MCP: mcpCategoryData,
       };
     }
-    return data;
-  }, [data, mcpSuccess, mcpServers]);
+
+    // Add Ariba agents category
+    if (aribaSuccess && aribaAgents && Array.isArray(aribaAgents) && aribaAgents.length > 0) {
+      console.log("DEBUG: Creating Ariba agent components", { 
+        aribaAgentsCount: aribaAgents.length, 
+        agentNames: aribaAgents.map(a => a.name),
+        agentIDs: aribaAgents.map(a => a.ID)
+      });
+      
+      const aribaAgentComponents: Record<string, any> = {};
+      
+      aribaAgents.forEach((agent) => {
+        if (agent && agent.name && agent.ID) {
+          // Use the unique agent ID as the key to avoid collisions
+          const uniqueKey = `agent_${agent.ID}`;
+          console.log("DEBUG: Creating component for agent", { uniqueKey, agentName: agent.name });
+          aribaAgentComponents[uniqueKey] = {
+            display_name: agent.name,
+            description: agent.description || `${agent.name}: ${agent.expertIn}`,
+            category: "ariba_agents",
+            key: `ariba_${agent.ID}`,
+            template: {
+              _type: "AribaAgent",
+              display_name: agent.name,
+              description: agent.description || `${agent.name}: ${agent.expertIn}`,
+              base_classes: ["Component"],
+              inputs: {
+                input_value: {
+                  type: "str",
+                  required: true,
+                  placeholder: "Enter your message...",
+                  display_name: "Input",
+                  info: "Message to send to the agent",
+                },
+                session_id: {
+                  type: "str",
+                  required: false,
+                  display_name: "Session ID",
+                  info: "Session identifier for conversation tracking",
+                },
+              },
+              outputs: {
+                message: {
+                  types: ["Message"],
+                  display_name: "Message",
+                  info: "Agent response message",
+                },
+              },
+              // Store agent data for execution - this contains the specific agent info
+              agent_data: {
+                ID: agent.ID,
+                name: agent.name,
+                expertIn: agent.expertIn,
+                initialInstructions: agent.initialInstructions,
+                advancedModel: agent.advancedModel,
+                baseModel: agent.baseModel,
+                iterations: agent.iterations,
+                mode: agent.mode,
+                safetyCheck: agent.safetyCheck,
+                defaultOutputFormat: agent.defaultOutputFormat,
+              },
+            },
+          };
+        }
+      });
+
+      if (Object.keys(aribaAgentComponents).length > 0) {
+        console.log("DEBUG: Final Ariba agent components", { 
+          componentCount: Object.keys(aribaAgentComponents).length,
+          componentKeys: Object.keys(aribaAgentComponents)
+        });
+        extendedData = {
+          ...extendedData,
+          ariba_agents: aribaAgentComponents,
+        };
+      }
+    }
+
+    return extendedData;
+  }, [data, mcpSuccess, mcpServers, aribaSuccess, aribaAgents]);
 
   const [dataFilter, setFilterData] = useState(baseData);
 

@@ -275,6 +275,86 @@ async def save_ariba_agents(
         raise HTTPException(status_code=500, detail=f"Failed to save agents: {e!s}")
 
 
+@router.post("/ariba_agents/execute")
+async def execute_ariba_agent(
+    request_data: dict[str, Any],
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """Execute a specific Ariba agent with a message."""
+    try:
+        agent_id = request_data.get("agent_id")
+        message = request_data.get("message")
+        additional_instructions = request_data.get("additional_instructions", "")
+        
+        if not agent_id:
+            raise HTTPException(status_code=400, detail="agent_id is required")
+        if not message:
+            raise HTTPException(status_code=400, detail="message is required")
+        
+        logger.info(f"Executing Ariba agent {agent_id} for user: {current_user.id}")
+        
+        # Get credentials
+        credentials = await get_sap_credentials_by_user_id(session, current_user.id)
+        if not credentials:
+            raise HTTPException(status_code=404, detail="SAP credentials not found. Please configure your credentials first.")
+        
+        # Get OAuth token
+        access_token = await get_oauth_token(credentials.credentials_data)
+        
+        # Get agent API URL from credentials
+        credentials_data = credentials.credentials_data
+        agent_api_url = None
+        
+        # Check for service key format first
+        if "service_urls" in credentials_data:
+            service_urls = credentials_data["service_urls"]
+            agent_api_url = service_urls.get("agent_api_url")
+        else:
+            # Check for direct format
+            agent_api_url = credentials_data.get("agent_api_url")
+        
+        if not agent_api_url:
+            raise HTTPException(status_code=400, detail="Missing agent_api_url in credentials")
+        
+        # Ensure URL ends with slash for proper concatenation
+        if not agent_api_url.endswith('/'):
+            agent_api_url += '/'
+        
+        # Prepare the message payload for the agent
+        payload = {
+            "message": message,
+            "additional_instructions": additional_instructions
+        }
+        
+        # Execute the agent
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                f"{agent_api_url}api/v1/Agents({agent_id})/execute",
+                json=payload,
+                headers=headers
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            response_text = result.get("response", result.get("message", "No response from agent"))
+            
+            logger.info(f"Successfully executed agent {agent_id} for user: {current_user.id}")
+            return {"response": response_text}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to execute agent {agent_id} for user {current_user.id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to execute agent: {e!s}")
+
+
 @router.delete("/pab/credentials")
 async def delete_pab_credentials(
     *,

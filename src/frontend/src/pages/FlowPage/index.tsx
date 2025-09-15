@@ -13,10 +13,8 @@ import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import {
-  FlowSearchProvider,
-  FlowSidebarComponent,
-} from "./components/flowSidebarComponent";
+import { FlowSearchProvider } from "./components/flowSidebarComponent/contexts/SearchContext";
+import { FlowSidebarComponent } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {

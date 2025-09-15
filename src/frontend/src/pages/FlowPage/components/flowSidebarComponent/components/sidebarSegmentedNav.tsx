@@ -8,7 +8,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/utils/utils";
-import { useSearchContext } from "../index";
+import { useSearchContext } from "../contexts/SearchContext";
 
 export type { SidebarSection };
 
