@@ -25,6 +25,7 @@ class AribaAgentComponent(Component):
     )
     icon: str = "bot"
     name: str = "AribaAgent"
+    code_class_base_inheritance: str = "Component"
 
     inputs = [
         DropdownInput(
