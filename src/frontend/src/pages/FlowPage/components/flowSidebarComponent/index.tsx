@@ -156,55 +156,131 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       
       aribaAgents.forEach((agent) => {
         if (agent && agent.name && agent.ID) {
-          // Use the unique agent ID as the key to avoid collisions
-          const uniqueKey = `agent_${agent.ID}`;
-          console.log("DEBUG: Creating component for agent", { uniqueKey, agentName: agent.name });
-          aribaAgentComponents[uniqueKey] = {
+          // Use the agent name as the key for display
+          const componentKey = agent.name;
+          console.log("DEBUG: Creating component for agent", { componentKey, agentName: agent.name, agentID: agent.ID });
+          
+          aribaAgentComponents[componentKey] = {
             display_name: agent.name,
-            description: agent.description || `${agent.name}: ${agent.expertIn}`,
+            description: `${agent.name}: ${agent.expertIn || 'Specialized Ariba agent'}`,
             category: "ariba_agents",
-            key: `ariba_${agent.ID}`,
+            icon: "bot",
+            base_classes: ["Component"],
             template: {
               _type: "AribaAgent",
-              display_name: agent.name,
-              description: agent.description || `${agent.name}: ${agent.expertIn}`,
-              base_classes: ["Component"],
-              inputs: {
-                input_value: {
-                  type: "str",
-                  required: true,
-                  placeholder: "Enter your message...",
-                  display_name: "Input",
-                  info: "Message to send to the agent",
-                },
-                session_id: {
-                  type: "str",
-                  required: false,
-                  display_name: "Session ID",
-                  info: "Session identifier for conversation tracking",
-                },
+              // Pre-populate the agent_id field with this specific agent's ID
+              agent_id: {
+                type: "str",
+                required: false,
+                display_name: "Select Ariba Agent",
+                info: "Select an existing Ariba agent to use for task execution.",
+                value: agent.ID, // Pre-select this agent
+                options: [agent.ID],
+                real_time_refresh: true,
+                advanced: false,
               },
-              outputs: {
-                message: {
-                  types: ["Message"],
-                  display_name: "Message",
-                  info: "Agent response message",
-                },
+              agent_name: {
+                type: "str",
+                required: false,
+                display_name: "Name",
+                info: "Enter Agent Name (required for creating new agents).",
+                value: agent.name,
+                advanced: false,
               },
-              // Store agent data for execution - this contains the specific agent info
-              agent_data: {
-                ID: agent.ID,
-                name: agent.name,
-                expertIn: agent.expertIn,
-                initialInstructions: agent.initialInstructions,
-                advancedModel: agent.advancedModel,
-                baseModel: agent.baseModel,
-                iterations: agent.iterations,
-                mode: agent.mode,
-                safetyCheck: agent.safetyCheck,
-                defaultOutputFormat: agent.defaultOutputFormat,
+              expertise: {
+                type: "str",
+                required: false,
+                display_name: "Expertise",
+                info: "Short description of what the agent is an expert in.",
+                value: agent.expertIn || "",
+                advanced: false,
+              },
+              initial_instructions: {
+                type: "str",
+                required: false,
+                display_name: "Initial Instructions",
+                info: "Initial instructions that are used for every new chat session.",
+                value: agent.initialInstructions || "",
+                multiline: true,
+                advanced: false,
+              },
+              max_thinking_steps: {
+                type: "int",
+                required: false,
+                display_name: "Maximum Thinking Steps",
+                info: "Maximum thinking steps (5-100).",
+                value: agent.iterations || 20,
+                range_spec: {"min": 5, "max": 100, "step": 1},
+                advanced: true,
+              },
+              preprocessing_enabled: {
+                type: "bool",
+                required: false,
+                display_name: "Pre-processing",
+                info: "Enable/disable pre-processing.",
+                value: agent.preprocessingEnabled !== undefined ? agent.preprocessingEnabled : true,
+                advanced: true,
+              },
+              postprocessing_enabled: {
+                type: "bool",
+                required: false,
+                display_name: "Post-processing",
+                info: "Enable/disable post-processing.",
+                value: agent.postprocessingEnabled !== undefined ? agent.postprocessingEnabled : true,
+                advanced: true,
+              },
+              llm_provider: {
+                type: "str",
+                required: false,
+                display_name: "LLM Provider",
+                info: "Select the LLM provider for the agent.",
+                options: ["Google", "MistralAI", "OpenAI"],
+                value: "OpenAI",
+                advanced: true,
+              },
+              base_model: {
+                type: "str",
+                required: false,
+                display_name: "Base Model",
+                info: "Select the base model for the agent.",
+                options: ["GPT4o Mini", "GPT4o", "Claude 3.5 Sonnet", "Gemini 1.5 Pro"],
+                value: agent.baseModel || "GPT4o Mini",
+                advanced: true,
+              },
+              advanced_model: {
+                type: "str",
+                required: false,
+                display_name: "Advanced Model",
+                info: "Select the advanced model for the agent.",
+                options: ["GPT4o", "Claude 3.5 Sonnet", "Gemini 1.5 Pro"],
+                value: agent.advancedModel || "GPT4o",
+                advanced: true,
+              },
+              input_value: {
+                type: "str",
+                required: true,
+                display_name: "Message",
+                info: "The message or task to send to the Ariba agent.",
+                tool_mode: true,
+              },
+              additional_instructions: {
+                type: "str",
+                required: false,
+                display_name: "Additional Instructions",
+                info: "Optional additional instructions to provide context for the agent.",
+                value: "",
+                multiline: true,
+                advanced: true,
               },
             },
+            outputs: [
+              {
+                types: ["Message"],
+                display_name: "Response",
+                name: "response",
+                method: "message_response",
+              }
+            ],
           };
         }
       });
